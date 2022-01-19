@@ -10,9 +10,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Startup Name Generator',
-      home: RandomWords(),
+      theme: ThemeData(
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black
+        )
+      ),
+      home: const RandomWords(),
     );
   }
 }
@@ -26,17 +32,18 @@ class RandomWords extends StatefulWidget {
 
 class _RandomWordsState extends State<RandomWords> {
   final _suggestions = <WordPair>[];
+  final _saved = <WordPair>{};
   final _biggerFont = const TextStyle(fontSize: 18);
 
-  Widget _buildSuggestions(){
+  Widget _buildSuggestions() {
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemBuilder: (context, i){
-        if (i.isOdd){
+      itemBuilder: (context, i) {
+        if (i.isOdd) {
           return const Divider();
         }
-        final index = i~/2;
-        if (index >= _suggestions.length){
+        final index = i ~/ 2;
+        if (index >= _suggestions.length) {
           _suggestions.addAll(generateWordPairs().take(10));
         }
         return _buildRow(_suggestions[index]);
@@ -44,22 +51,74 @@ class _RandomWordsState extends State<RandomWords> {
     );
   }
 
-  Widget _buildRow(WordPair pair){
+  Widget _buildRow(WordPair pair) {
+    final alreadySaved = _saved.contains(pair);
     return ListTile(
       title: Text(
-        pair.asPascalCase,style: _biggerFont,
+        pair.asPascalCase,
+        style: _biggerFont,
       ),
+      trailing: Icon(
+        alreadySaved ? Icons.favorite : Icons.favorite_border,
+        color: alreadySaved ? Colors.red : null,
+        semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
+      ),
+      onTap: () {
+        setState(() {
+          if (alreadySaved) {
+            _saved.remove(pair);
+          } else {
+            _saved.add(pair);
+          }
+        });
+      },
     );
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Startup Name Generator'),
+        actions: [
+          IconButton(
+            onPressed: _pushSaved,
+            icon: const Icon(Icons.list),
+            tooltip: 'Saved Suggestions',
+          )
+        ],
       ),
       body: _buildSuggestions(),
     );
   }
-}
 
+  void _pushSaved(){
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+          builder: (context){
+            final tiles = _saved.map((pair){
+              return ListTile(
+                title: Text(
+                  pair.asPascalCase,
+                  style: _biggerFont,
+                ),
+              );
+            },
+            );
+            final divided = tiles.isNotEmpty ? ListTile.divideTiles(
+                context: context,
+                tiles: tiles).toList() : <Widget>[];
+
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Saved Suggestions'),
+              ),
+              body: ListView(
+                children: divided,
+              ),
+            );
+          }
+      )
+    );
+  }
+}
